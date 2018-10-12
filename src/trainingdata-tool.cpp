@@ -48,7 +48,7 @@ lczero::Move poly_move_to_lc0_move(move_t move, board_t * board) {
 
 lczero::V3TrainingData get_v3_training_data(
     lczero::GameResult game_result, const lczero::PositionHistory& history,
-    lczero::Move played_move) {
+    lczero::Move played_move, lczero::MoveList legal_moves) {
 
   lczero::V3TrainingData result;
 
@@ -59,6 +59,11 @@ lczero::V3TrainingData get_v3_training_data(
   // move that was effectively played
   std::memset(result.probabilities, 0, sizeof(result.probabilities));
   result.probabilities[played_move.as_nn_index()] = 1.0f;
+
+  // Populate legal moves
+  for (lczero::Move move : legal_moves) {
+      result.legal[move.as_nn_index()] = 1;
+  }
 
   // Populate planes.
   lczero::InputPlanes planes = EncodePositionForNN(history, 8);
@@ -130,9 +135,18 @@ void write_one_game_training_data(pgn_t* pgn, int game_id) {
     if (!move_to_can(move, board, str, 256)) ASSERT(false);
     lczero::Move lc0_move = poly_move_to_lc0_move(move, board);
 
+    lczero::MoveList lc0_legal_moves;
+    list_t legal_moves[1];
+    gen_legal_moves(legal_moves, board);
+    for (int i = 0; i < list_size(legal_moves); i++) {
+        move_t legal_move = list_move(legal_moves, i);
+        lczero::Move m = poly_move_to_lc0_move(move, board);
+        lc0_legal_moves.emplace_back(m);
+    }
+
     // Generate training data
     lczero::V3TrainingData chunk =
-        get_v3_training_data(game_result, position_history, lc0_move);
+        get_v3_training_data(game_result, position_history, lc0_move, lc0_legal_moves);
 
     // Execute move
     position_history.Append(lc0_move);
