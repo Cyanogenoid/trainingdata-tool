@@ -61,6 +61,7 @@ lczero::V3TrainingData get_v3_training_data(
   result.probabilities[played_move.as_nn_index()] = 1.0f;
 
   // Populate legal moves
+  std::memset(result.legal, 0, sizeof(result.legal));
   for (lczero::Move move : legal_moves) {
       result.legal[move.as_nn_index()] = 1;
   }
@@ -140,7 +141,7 @@ void write_one_game_training_data(pgn_t* pgn, int game_id) {
     gen_legal_moves(legal_moves, board);
     for (int i = 0; i < list_size(legal_moves); i++) {
         move_t legal_move = list_move(legal_moves, i);
-        lczero::Move m = poly_move_to_lc0_move(move, board);
+        lczero::Move m = poly_move_to_lc0_move(legal_move, board);
         lc0_legal_moves.emplace_back(m);
     }
 
