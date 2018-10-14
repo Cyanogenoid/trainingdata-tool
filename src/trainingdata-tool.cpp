@@ -156,14 +156,7 @@ void write_one_game_training_data(pgn_t* pgn, int game_id) {
     }
     */
 
-    lczero::MoveList lc0_legal_moves;
-    list_t legal_moves[1];
-    gen_legal_moves(legal_moves, board);
-    for (int i = 0; i < list_size(legal_moves); i++) {
-        move_t legal_move = list_move(legal_moves, i);
-        lczero::Move m = poly_move_to_lc0_move(legal_move, board);
-        lc0_legal_moves.emplace_back(m);
-    }
+    lczero::MoveList lc0_legal_moves = position_history.Last().GetBoard().GenerateLegalMoves();
 
     // Generate training data
     lczero::V3TrainingData chunk =
