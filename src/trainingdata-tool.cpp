@@ -52,21 +52,26 @@ lczero::Move poly_move_to_lc0_move(move_t move, board_t* board) {
   return m;
 }
 
-lczero::V3TrainingData get_v3_training_data(
+lczero::V4TrainingData get_v4_training_data(
     lczero::GameResult game_result, const lczero::PositionHistory& history,
     lczero::Move played_move) {
-  lczero::V3TrainingData result;
+  lczero::V4TrainingData result;
 
   // Set version.
-  result.version = 3;
+  result.version = 4;
 
   // Populate probabilities, for supervised learning simply assign 1.0 to the
-  // move that was effectively played
-  std::memset(result.probabilities, 0, sizeof(result.probabilities));
+  // move that was effectively played, -1 for all illegal moves
+  std::memset(result.probabilities, -1, sizeof(result.probabilities));
   result.probabilities[played_move.as_nn_index()] = 1.0f;
+  // Overwrite legal moves to have 0 probability
+  lczero::MoveList legal_moves = history.Last().GetBoard().GenerateLegalMoves();
+  for (lczero::Move move : legal_moves) {
+      result.probabilities[move.as_nn_index()] = 0.0f;
+  }
 
   // Populate planes.
-  lczero::InputPlanes planes = EncodePositionForNN(history, 8);
+  lczero::InputPlanes planes = EncodePositionForNN(history, 8, lczero::FillEmptyHistory::NO);
   int plane_idx = 0;
   for (auto& plane : result.planes) {
     plane = resever_bits_in_bytes(planes[plane_idx++].mask);
@@ -97,14 +102,19 @@ lczero::V3TrainingData get_v3_training_data(
     result.result = 0;
   }
 
+  result.root_q = 0.0f;
+  result.best_q = 0.0f;
+  result.root_d = 0.0f;
+  result.best_d = 0.0f;
+
   return result;
 }
 
 void write_one_game_training_data(pgn_t* pgn, int game_id) {
-  std::vector<lczero::V3TrainingData> training_data;
+  std::vector<lczero::V4TrainingData> training_data;
   lczero::ChessBoard starting_board;
   const std::string starting_fen =
-      std::strlen(pgn->fen) > 0 ? pgn->fen : lczero::ChessBoard::kStartingFen;
+      std::strlen(pgn->fen) > 0 ? pgn->fen : lczero::ChessBoard::kStartposFen;
   starting_board.SetFromFen(starting_fen, nullptr, nullptr);
   lczero::PositionHistory position_history;
   position_history.Reset(starting_board, 0, 0);
@@ -151,8 +161,8 @@ void write_one_game_training_data(pgn_t* pgn, int game_id) {
     */
 
     // Generate training data
-    lczero::V3TrainingData chunk =
-        get_v3_training_data(game_result, position_history, lc0_move);
+    lczero::V4TrainingData chunk =
+        get_v4_training_data(game_result, position_history, lc0_move);
 
     // Execute move
     position_history.Append(lc0_move);

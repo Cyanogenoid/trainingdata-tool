@@ -3,6 +3,8 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
+set (CMAKE_CXX_STANDARD 14)
+
 file(GLOB_RECURSE sources src/*.cpp src/*.h)
 
 set (
@@ -14,6 +16,7 @@ set (
     "lc0/src/neural/writer.cc"
     "lc0/src/utils/commandline.cc"
     "lc0/src/utils/random.cc"
+    "lc0/src/utils/logging.cc"
 )
 
 if (WIN32)
@@ -35,5 +38,8 @@ include_directories(
     "polyglot/src"
     "zlib"
 )
+
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNO_PEXT")
 
 # TODO: Add tests and install targets if needed.
